@@ -77,8 +77,15 @@
                     <span id="record-select">select record</span>
 	            <span class="caret"></span>
                   </button>
-	          <ul class="dropdown-menu">
+          <ul class="dropdown-menu">
                    <li><a href="#" onclick="readRecord('aarch64');">AArch64</a></li>
+                   <li class="oban-parent">
+                     <span class="oban-label">AArch64-Oban</span>
+                     <div class="oban-menu">
+                       <input type="text" id="oban-search" class="oban-search" placeholder="Search updates">
+                       <ul id="oban-updates" class="oban-updates"></ul>
+                     </div>
+                   </li>
                    <li><a href="#" onclick="readRecord('aarch64-ifetch');">AArch64 ifetch</a></li>
                    <li><a href="#" onclick="readRecord('aarch64-mixed');">AArch64 mixed-size</a></li>
                    <li><a href="#" onclick="readRecord('aarch64-MTE');">AArch64 MTE</a></li>

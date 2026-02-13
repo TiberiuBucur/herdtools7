@@ -58,6 +58,86 @@
   background-repeat: repeat-x;
 }
 
+.dropdown-menu .oban-parent {
+  position: relative;
+}
+
+.dropdown-menu .oban-label {
+  display: block;
+  padding: 3px 20px;
+  line-height: 1.42857;
+  color: #333;
+  white-space: nowrap;
+  cursor: default;
+}
+
+.dropdown-menu .oban-parent:hover .oban-label {
+  color: #262626;
+  text-decoration: none;
+  background-color: #E8E8E8;
+  background-image: linear-gradient(to bottom, #F5F5F5 0px, #E8E8E8 100%);
+  background-repeat: repeat-x;
+}
+
+.dropdown-menu .oban-menu {
+  position: absolute;
+  top: 0;
+  left: 100%;
+  margin-left: 0;
+  padding: 6px;
+  background: #fff;
+  border: 1px solid rgba(0,0,0,0.15);
+  border-radius: 4px;
+  box-shadow: 0 6px 12px rgba(0,0,0,0.175);
+  min-width: 220px;
+  display: none;
+  z-index: 1000;
+}
+
+.dropdown-menu .oban-parent:hover .oban-menu,
+.dropdown-menu .oban-menu:hover {
+  display: block;
+}
+
+.dropdown-menu .oban-menu::before {
+  content: \"\";
+  position: absolute;
+  top: 0;
+  left: -8px;
+  width: 8px;
+  height: 100%;
+  background: transparent;
+}
+
+.oban-search {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  margin-bottom: 6px;
+  font-size: 12px;
+}
+
+.oban-updates {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  max-height: min(140px, 40vh);
+  overflow-y: auto;
+}
+
+.oban-updates li a {
+  display: block;
+  padding: 4px 8px;
+  color: #333;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.oban-updates li a:hover {
+  background-color: #E8E8E8;
+}
+
 #campaign-table {
     width: 100%;
     max-height: 550px;

@@ -3,10 +3,14 @@ AARCH64_BOOKS= aarch64 aarch64-ifetch aarch64-mixed aarch64-MTE aarch64-MTE-mixe
 BOOKS= $(AARCH64_BOOKS) bpf x86 linux
 WWW_CATALOGUE=www/catalogue
 HERD_CATALOGUE=../catalogue
+OBAN_ROOT=$(HERD_CATALOGUE)/aarch64-oban
+OBAN_UPDATES=$(notdir $(wildcard $(OBAN_ROOT)/*))
+OBAN_ENV_PAIRS=$(foreach u,$(OBAN_UPDATES),-env $(u)=$(OBAN_ROOT)/$(u)/libdir)
 PROG=jerd.js
 WWW_PROG=www/$(PROG)
 WWW_LIB=www/weblib
-JSON_SHELVES=$(foreach book,$(BOOKS),$(WWW_CATALOGUE)/$(book)/shelf.json)
+JSON_SHELVES=$(foreach book,$(BOOKS) $(OBAN_UPDATES),$(WWW_CATALOGUE)/$(book)/shelf.json)
+OBAN_UPDATES_JSON=$(WWW_CATALOGUE)/oban-updates.json
 ARM_ARM_RELEASES=$(wildcard ../herd/libdir/aarch64/*)
 ENV_PAIRS := $(foreach d,$(ARM_ARM_RELEASES),-env $(notdir $(d))=$(d))
 CATINCLUDES=../herd/libdir linux $(foreach b,$(BOOKS),$(HERD_CATALOGUE)/$(b)/cats)
@@ -33,12 +37,24 @@ $(WWW_CATALOGUE)/$1/:
 
 .PHONY:: $(WWW_CATALOGUE)/$1/
 endef
+
+define make-oban-update
+$(WWW_CATALOGUE)/$1/:
+	@echo "** OBAN $1"
+	mkdir -p $(WWW_CATALOGUE)
+	rsync -a --copy-unsafe-links --delete --exclude 'libdir/' $(OBAN_ROOT)/$1/ $(WWW_CATALOGUE)/$1/
+	cp oban_shelf.py $(WWW_CATALOGUE)/$1/shelf.py
+	mkdir -p $(WWW_CATALOGUE)/$1/cats
+	cp $(OBAN_ROOT)/$1/libdir/aarch64.cat $(WWW_CATALOGUE)/$1/cats/aarch64.cat
+
+.PHONY:: $(WWW_CATALOGUE)/$1/
+endef
 tst:
-	ocaml generate_names.ml -norec $(ENV_PAIRS) $(CATINCLUDES) | \
+	ocaml generate_names.ml -norec $(ENV_PAIRS) $(OBAN_ENV_PAIRS) $(CATINCLUDES) | \
 	while read a b; do echo "rel=($$a), src=($$b)" ; done
 weblib:
 	@echo '** INSTALL ' $(WWW_LIB) && mkdir -p $(WWW_LIB)
-	@ocaml generate_names.ml -norec $(ENV_PAIRS) $(CATINCLUDES) | \
+	@ocaml generate_names.ml -norec $(ENV_PAIRS) $(OBAN_ENV_PAIRS) $(CATINCLUDES) | \
 		while IFS="$$(printf '\t')" read -r rel src; do \
 			mkdir -p "$(WWW_LIB)/$$(dirname "$$rel")" && \
 			cp "$$src" "$(WWW_LIB)/$$rel" && \
@@ -46,7 +62,7 @@ weblib:
 		done
 	@find $(WWW_LIB) -type d -exec cp ./cat.css {}/cat.css \;
 
-web: $(JSON_SHELVES) $(PROG) weblib
+web: $(JSON_SHELVES) $(OBAN_UPDATES_JSON) $(PROG) weblib
 	@cp -v $(PROG) www/$(PROG)
 
 $(PROG): force
@@ -54,8 +70,13 @@ $(PROG): force
 	( cd .. && dune build --release @jerd )
 	cp $(DUNETGT)/jerd.bc.js $(PROG) && chmod u+w $(PROG)
 
-$(foreach book,$(BOOKS),$(eval $(call make-json-shelf,$(book))))
+$(OBAN_UPDATES_JSON): generate_oban_updates.py
+	@mkdir -p $(WWW_CATALOGUE)
+	@python3 generate_oban_updates.py $(OBAN_UPDATES) > $@
+
+$(foreach book,$(BOOKS) $(OBAN_UPDATES),$(eval $(call make-json-shelf,$(book))))
 $(foreach book,$(BOOKS),$(eval $(call make-book,$(book))))
+$(foreach u,$(OBAN_UPDATES),$(eval $(call make-oban-update,$(u))))
 
 clean::
 	/bin/rm -f *~
@@ -66,4 +87,4 @@ clean::
 clean::
 	/bin/rm -rf $(DUNETGT)
 
-.PHONY:: force clean web
+.PHONY:: force clean web $(OBAN_UPDATES_JSON)

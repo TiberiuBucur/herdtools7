@@ -22,6 +22,8 @@ function initCurrentState() {
         'compatNum' : null,
         'campaignCode' : [],
         'catLabelPrefix' : '',
+        'obanUpdates' : [],
+        'recordIsOban' : false,
         'bell' : { 'origText' : null, 'origUrl' : null, 'pos' : null },
         'cat' : { 'origText' : null, 'origUrl' : null, 'pos' : null },
         'cfg' : { 'origText' : null, 'origUrl' : null, 'pos' : null },
@@ -87,6 +89,18 @@ function shortname(path) {
         return null
     }
     return basename(path).replace(/\.[^/.]+$/, "")
+}
+
+function catLabelForHerd() {
+    var catUrl = currentState['cat'] ? currentState['cat']['origUrl'] : null;
+    if (currentState['recordIsOban']) {
+        var env = currentState['record'];
+        if (env && catUrl) {
+            return env + '/' + basename(catUrl);
+        }
+        return '';
+    }
+    return catLabel(catUrl);
 }
 
 function indexOfShortFilenameInArray(name, array) {
@@ -234,24 +248,38 @@ function clearLitmusEditor() {
 }
 
 function clearCfgEditor() {
+    editors['cfg'].setValue(defaultCfgText(), -1);
+}
+
+function clearEditorByName(name) {
+    if (name === 'cat') {
+        clearCatEditor();
+    } else if (name === 'bell') {
+        clearBellEditor();
+    } else if (name === 'litmus') {
+        clearLitmusEditor();
+    } else if (name === 'cfg') {
+        loadDefaultCfg();
+    }
+}
+
+function defaultCfgText() {
     // default is web.cfg. Watch out for this getting out of sync...
-    editors['cfg'].setValue(
-        'graph columns\n'
-            + 'squished true\n'
-            + 'showevents memory\n'
-            + 'showinitwrites false\n'
-            + 'fontsize 8\n'
-            + 'scale 0.75\n'
-            + 'xscale 1.0\n'
-            + 'yscale 0.6667\n'
-            + 'arrowsize 0.5\n'
-            + 'doshow fr\n'
-            + 'showinitrf false\n'
-            + 'showfinalrf false\n'
-            + 'splines spline\n'
-            + 'pad 0.1\n'
-            + 'showlegend false\n',
-            -1);
+    return 'graph columns\n'
+        + 'squished true\n'
+        + 'showevents memory\n'
+        + 'showinitwrites false\n'
+        + 'fontsize 8\n'
+        + 'scale 0.75\n'
+        + 'xscale 1.0\n'
+        + 'yscale 0.6667\n'
+        + 'arrowsize 0.5\n'
+        + 'doshow fr\n'
+        + 'showinitrf false\n'
+        + 'showfinalrf false\n'
+        + 'splines spline\n'
+        + 'pad 0.1\n'
+        + 'showlegend false\n';
 }
 
 function clearAllEditors() {
@@ -259,6 +287,24 @@ function clearAllEditors() {
     clearBellEditor();
     clearLitmusEditor();
     clearCfgEditor();
+}
+
+function loadDefaultCfg() {
+    var text = defaultCfgText();
+    currentState['cfg']['origUrl'] = null;
+    currentState['cfg']['origText'] = text;
+    currentState['cfg']['pos'] = null;
+    editors['cfg'].setValue(text, -1);
+    $(selectMenuIdOfEditorName('cfg')).html('default.cfg');
+    var item = $('<li/>')
+        .append($('<a/>', {
+            text: 'default.cfg',
+            href: '#',
+        }).click(function(e) {
+            e.preventDefault();
+            loadDefaultCfg();
+        }));
+    populateEditorPanelHeader(fileListOfEditorName('cfg'), [item]);
 }
 
 function populateEditorPanelHeader(id, elems) {
@@ -385,9 +431,20 @@ function doDownloadAndSetEditorValue(url, name, pos) {
                     setLitmusSyntaxHighlighting();
                 }
                 if (name == 'cat') {
-                    var nhref = 'weblib/' + catLabel(url) + '.html' ;
+                    var nhref = 'weblib/' + catLabelForHerd() + '.html' ;
                     document.getElementById('show-cat').href = nhref ;
                 }
+            }
+        })(url, name, pos),
+        error: (function(url, name, pos) {
+            return function () {
+                if (name !== 'cfg') {
+                    error('failed to load ' + name + ': ' + url);
+                    return;
+                }
+
+                loadDefaultCfg();
+                updateLinkToExample();
             }
         })(url, name, pos)
     });
@@ -426,6 +483,14 @@ function updateEditor(
     incompatString, incompatElems,
     compatKey,
     callback) {
+    if (!compatElems || compatElems.length === 0) {
+        clearEditorByName(name);
+        currentState[name]['origUrl'] = null;
+        currentState[name]['origText'] = null;
+        currentState[name]['pos'] = null;
+        return;
+    }
+
     var items = prepareItemListWithCompatibilities(
         name,
         compatString, compatElems,
@@ -674,12 +739,16 @@ function updateAllEditors(compatNum, bellKey, catKey, cfgKey, litmusKey, warnOnC
         cfgNum = 0;
     }
 
-    updateEditor(
-        'cfg',
-        null, currentState['shelf']['cfgs'],
-        null, null,
-        cfgNum,
-        null);
+    if (currentState['shelf']['cfgs'] === null || currentState['shelf']['cfgs'].length === 0) {
+        loadDefaultCfg();
+    } else {
+        updateEditor(
+            'cfg',
+            null, currentState['shelf']['cfgs'],
+            null, null,
+            cfgNum,
+            null);
+    }
 
     if (currentState['shelf']['compatibilities'] !== null) {
         updateAllEditorsWithCompatibility(
@@ -840,6 +909,10 @@ function readRecord(record, displayName, compatNum, bellKey, catKey, cfgKey, lit
     if (typeof displayName === 'undefined') {
         displayName = record;
     }
+
+    currentState['recordIsOban'] = currentState['obanUpdates']
+        && currentState['obanUpdates'].length > 0
+        && currentState['obanUpdates'].indexOf(record) >= 0;
 
     if (record === currentState['record']
         && typeof bellString === 'undefined' && typeof catString === 'undefined'
@@ -1009,10 +1082,7 @@ function jerdIt() {
     var catStr = editors['cat'].getValue();
     var cfgStr = editors['cfg'].getValue();
     var litmusStr = editors['litmus'].getValue();
-    var catSelectedLabel = '';
-    if (currentState['cat'] && currentState['cat']['origUrl'] !== null) {
-        catSelectedLabel = catLabel(currentState['cat']['origUrl']);
-    }
+    var catSelectedLabel = catLabelForHerd();
     runHerd(
         bellStr,
         catStr,
@@ -1034,10 +1104,7 @@ function jerdAll() {
                 var cfgStr = editors['cfg'].getValue();
                 var catStr = editors['cat'].getValue();
                 var litmusStr = data;
-                var catSelectedLabel = '';
-                if (currentState['cat'] && currentState['cat']['origUrl'] !== null) {
-                    catSelectedLabel = catLabel(currentState['cat']['origUrl']);
-                }
+                var catSelectedLabel = catLabelForHerd();
 
                 runHerd(
                     bellStr,
@@ -1173,6 +1240,41 @@ function saveCurrentES() {
     saveAs(blob, "es" + currentIndex.toString() + ".svg");
 }
 
+function renderObanUpdates(filter) {
+    var updates = currentState['obanUpdates'] || [];
+    var list = $('#oban-updates');
+    list.empty();
+
+    var q = (filter || '').toLowerCase();
+    for (var i = 0; i < updates.length; i++) {
+        var rec = updates[i];
+        if (q && rec.toLowerCase().indexOf(q) === -1) {
+            continue;
+        }
+        var link = $('<a/>', {
+            href: '#',
+            text: rec,
+        }).click((function(record) {
+            return function(e) {
+                e.preventDefault();
+                readRecord(record, record);
+            };
+        })(rec));
+        list.append($('<li/>').append(link));
+    }
+}
+
+function loadObanUpdates() {
+    $.getJSON('catalogue/oban-updates.json', function(result){
+        if (Array.isArray(result)) {
+            currentState['obanUpdates'] = result;
+        } else {
+            currentState['obanUpdates'] = [];
+        }
+        renderObanUpdates('');
+    });
+}
+
 $(function () {
     initCurrentState();
 
@@ -1190,13 +1292,10 @@ $(function () {
         if (debug) console.log("CLICK", data); // Just for testing so you can see what classes things are...
         if (data && data.token && data.token.type == "string") {
             var clicked = data.token.value.replace(/^"/,'').replace(/"$/,'');
-
-            if (currentState['cat'] && currentState['cat']['origUrl'] !== null) {
-                var curLabel = catLabel(currentState['cat']['origUrl']);
-                var curDir = dirname(curLabel);
-                if (curDir !== '') {
-                    clicked = curDir + '/' + clicked;
-                }
+            var curLabel = catLabelForHerd();
+            var curDir = dirname(curLabel);
+            if (curDir !== '') {
+                clicked = curDir + '/' + clicked;
             }
 
             window.open("weblib/" + clicked, "_blank");
@@ -1213,6 +1312,18 @@ $(function () {
     wireEditorButtons('cat');
     wireEditorButtons('cfg');
     wireEditorButtons('litmus');
+
+    loadObanUpdates();
+    $('#oban-search').val('');
+    $('#oban-search').on('input', function() {
+        renderObanUpdates($(this).val());
+    });
+    $('.oban-label').on('click', function(e) {
+        e.stopPropagation();
+    });
+    $('#oban-search').on('click mousedown', function(e) {
+        e.stopPropagation();
+    });
 
     // workaround to update hidden editors
     updateOnCollapseIn('cat', '#cat-collapse');
