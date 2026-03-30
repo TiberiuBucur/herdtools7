@@ -1,0 +1,13 @@
+-ob
+ -hw-reqs
+  -local-hw-reqs
+   -lob
+    -DSB-ob
+     -[M | DC.CVAU | IC | TLBI]; po; [dsb.full]; po; [~(Imp & TTD & M | Imp & Instr & R)]
+     -[M | DC.CVAU | IC | TLBI]; po; [dsb.full]; po; [Imp & TTD & M]
+    -IFB-ob
+     -DSB-ob; [IFB]; po
+ -obs
+  -TTD-obs
+   -TLBI-ca
+    -[TLBI]; TLBI-after; [Imp & TTD & R]; ca; [W]

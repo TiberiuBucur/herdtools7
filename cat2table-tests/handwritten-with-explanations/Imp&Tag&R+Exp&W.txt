@@ -1,0 +1,56 @@
+- ob
+
+Chains produced by unfolding ob:
+- hw-reqs
+- obs
+
+Chains produced by unfolding hw-reqs:
+- local-hw-reqs
+
+Chains produced by unfolding local-hw-reqs:
+- lob
+
+Chains produced by unfolding lob:
+- tc-ib
+- DSB-ob
+- IFB-ob
+- lwfs
+- lwfs; sca-class
+- dob
+- bob
+
+Chains produced by unfolding tc-ib:
+- tc-before
+
+Chains produced by unfolding tc-before:
+- iico_data; [B]; iico_ctrl;
+(tool does not return this since the expansion of tc-ib is restricted on the right to [~(Exp & R)])
+
+Chains produced by unfolding DSB-ob:
+- po; [dsb.full]; po
+- po; [dsb.ld]; po
+
+Chains produced by unfolding IFB-ob:
+- DSB-ob; [IFB]; po
+- tc-ib; [IFB]; po
+- tc-before; [Exp & M]; po; [IFB]; po
+
+Chains produced by unfolding lwfs:
+- po & same-loc
+
+Chains produced by unfolding dob:
+- tc-before; [Exp & M]; po
+
+Chains produced by unfolding bob:
+- po; [dmb.full]; po
+- po; [dmb.ld]; po
+- po; [L]
+- iico_order; [L]
+
+Chains produced by unfolding obs:
+- Tag-obs
+- Tag-obs; sca-class
+(tool returns both those as one chain: Tag-obs; sca-class? - consistent with cat file)
+
+Chains produced by unfolding Tag-obs:
+- ca & ext (tool does not return this since it comes from a longer chain: Tag-obs; sca-class?)

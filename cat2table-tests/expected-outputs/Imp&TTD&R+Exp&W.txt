@@ -1,0 +1,27 @@
+-ob
+ -hw-reqs
+  -local-hw-reqs
+   -lob
+    -tr-ib
+     -[Imp & TTD & R]; iico_data; [B]; iico_ctrl; [Exp & M | MMU & FAULT]
+    -DSB-ob
+     -[M | DC.CVAU | IC | TLBI]; po; [dsb.full]; po; [~(Imp & TTD & M | Imp & Instr & R)]
+    -IFB-ob
+     -DSB-ob; [IFB]; po
+     -[Imp & TTD & R]; tr-ib; [IFB]; po
+     -[Imp & TTD & R]; tr-ib; [Exp & M]; po; [IFB]; po
+    -lmws
+     -[Imp & TTD & R]; po & same-loc; [Exp & W | HU]
+    -lmws; sca-class
+    -dob
+     -[Imp & TTD & R]; tr-ib; [Exp & M]; po; [Exp & W | HU]
+  -haz-ob
+   -TLBI-ob
+    -TTD-read-ordered-before
+     -TLBI-after; [TLBI]; DSB-ob
+     -TLBI-after; [TLBI]; IFB-ob
+    -([Imp & TTD & R]; tr-ib; same-low-order-bits & po; tr-ib^-1; [Imp & TTD & R]) & same-translation-context; TTD-read-ordered-before & ext
+ -obs
+  -TTD-obs
+   -TLBuncacheable-ca
+    -[range([TLBUncacheable & FAULT]; tr-ib^-1; [Imp & TTD & R])]; ca; [Exp & W | HU]

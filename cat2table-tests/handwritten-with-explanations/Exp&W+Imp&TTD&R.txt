@@ -1,0 +1,40 @@
+- ob
+
+Chains produced by unfolding ob:
+- hw-reqs
+- obs
+
+Chains produced by unfolding hw-reqs:
+- local-hw-reqs
+- haz-ob
+
+Chains produced by unfolding local-hw-reqs:
+- lob
+
+Chains produced by unfolding lob:
+- ets-ob
+- DSB-ob
+- IFB-ob
+
+Chains produced by unfolding ets-ob:
+- po; [TLBUncacheable & FAULT]; tr-ib^-1
+- po; [MMU & FAULT]; tr-ib^-1
+
+Chains produced by unfolding DSB-ob:
+- po; [dsb.full]; po
+- po; [dsb.st]; po;
+
+Chains produced by unfolding IFB-ob:
+- DSB-ob; [IFB]; po
+
+Chains produced by unfolding haz-ob:
+- TLBI-ob
+
+Chains produced by unfolding TLBI-ob:
+- tr-ib^-1; TTD-read-ordered-before & ext
+
+Chains produced by unfolding obs:
+- TTD-obs
+
+Chains produced by unfolding TTD-obs:
+- rf

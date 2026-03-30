@@ -1,0 +1,56 @@
+-ob
+
+Chains produced by unfolding ob:
+- hw-reqs
+- obs
+
+Chains produced by unfolding hw-reqs:
+- local-hw-reqs
+- haz-ob
+
+Chains produced by unfolding local-hw-reqs:
+- lob
+
+Chains produced by unfolding lob:
+- tr-ib
+- DSB-ob
+- IFB-ob
+- lwfs
+- lwfs; sca-class
+- dob
+
+Chains produced by unfolding tr-ib:
+- iico_data; [B]; iico_ctrl
+
+Chains produced by unfolding DSB-ob:
+- po; [dsb.full]; po
+
+Chains produced by unfolding IFB-ob:
+- DSB-ob; [IFB]; po
+- tr-ib; [IFB]; po
+- tr-ib; [Exp & M]; po; [IFB]; po
+
+Chains produced by unfolding lwfs:
+- po & same-loc
+
+Chains produced by unfolding dob:
+- tr-ib; [Exp & M]; po
+
+Chains produced by unfolding haz-ob:
+- TLBI-ob
+
+Chains produced by unfolding TLBI-ob:
+- TTD-read-ordered-before
+- po-va-loc; TTD-read-ordered-before & ext
+
+Chains produced by unfolding TTD-read-ordered-before:
+- TLBI-after; [TLBI]; po; [dsb.full]; po
+
+Chains produced by unfolding obs:
+- TTD-obs
+
+Chains produced by unfolding TTD-obs:
+- TLBuncacheable-pred
+
+Chains produced by unfolding TLBuncacheable-pred:
+- ca & ~intervening(W,ca)

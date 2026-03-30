@@ -1,0 +1,19 @@
+-ob
+ -hw-reqs
+  -local-hw-reqs
+   -lob
+    -ets-ob
+     -[Exp & M]; po; [TLBUncacheable & FAULT]; tr-ib^-1; [Imp & TTD & R]
+     -[Exp & M]; po; [MMU & FAULT]; tr-ib^-1; [Imp & TTD & R]
+    -DSB-ob
+     -[M | DC.CVAU | IC | TLBI]; po; [dsb.full]; po; [Imp & TTD & M]
+     -[Exp & W]; po; [dsb.st]; po; [Imp & TTD & M]
+    -IFB-ob
+     -DSB-ob; [IFB]; po
+  -haz-ob
+   -TLBI-ob
+    -tr-ib^-1; TTD-read-ordered-before & ext
+ -obs
+  -TTD-obs
+   -[Imp & TTD]; rf
+   -rf; [Imp & TTD]
