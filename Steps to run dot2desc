@@ -1,0 +1,99 @@
+dot2desc is a tool that, given a valid dot file representing possible executions of a litmus test as produced by herd, will describe those executions in English in a Markdown file.
+The tool actually produces Markdown with inlined LaTeX, which requires post-processing with pandoc using the catdefinitions.tex file inside the herdtools repository.
+Below is a step-by-step guide on how one can use dot2desc on a specific litmus test.
+
+1. Ensure the tool is built and installed in our path
+    # Checking out the branch will not be necessary once the pull request is merged
+    git checkout dot2desc
+    make && make install
+
+2. Run herd on the litmus test to build the dot file (skip this test if you already have a dot file)
+    # The -show all -showevents all configuration will work fine in most cases and will produce the most informative dot file
+    # Feel free to explore with other configurations
+    ~/bin/herd7 -show all -showevents all test_name.litmus -o .
+
+    This will have produced a file called test_name.dot in the current directory.
+    If we want to produce the file in a different directory, it can be specified with the -o option, as above.
+
+3. Run dot2desc
+    Note: This will alter the dot file by eliminating some unnecessary information, so that the graph
+    becomes more minimal and suitable for inclusion in the Arm ARM.
+
+    ~/bin/dot2desc7 test_name.dot > example.md
+
+    Now we have a Markdown file that could look something like this (example was generated using an LDR instruction on a memory location tagged with green):
+
+    -   D~1~: \iicodata{\RREof{X0}}{\ImpTagMREof{\taglocOf{x}{\memlocAddrBy{x}{X0}}}}.
+
+    -   D~2~: \iicodata{\RREof{X0}}{\IntrBranching{\iseqCheck{\allocTagOf{x}}{\logAddrTagIn{X0}}}}.
+
+    -   D~3~: \iicodata{\ImpTagMREof{\taglocOf{x}{\memlocAddrBy{x}{X0}}}}{\IntrBranching{\iseqCheck{\allocTagOf{x}}{\logAddrTagIn{X0}}}}.
+
+    -   D~4~: \iicodata{\RREof{X0}}{\ExpMREof{\memlocAddrBy{x}{X0}}}.
+
+    -   C~1~: \iicoctrl{\IntrBranching{\iseqCheck{\allocTagOf{x}}{\logAddrTagIn{X0}}}}{\ExpMREof{\memlocAddrBy{x}{X0}}}.
+
+    -   D~5~: \iicodata{\ExpMREof{\memlocAddrBy{x}{X0}}}{\RWEof{X1}}.
+
+4. Expand the inlined LaTeX.
+    All the LaTeX commands we can see above should be defined (and their definitions can be changed) in the catdefinitions.tex file.
+    If any of them is missing, that command will not be expanded at the end of this step.
+    The contents of the fix-formatting.lua and capitalize.lua scripts are given in the appendix.
+
+    # This produces a big LaTeX file with the contents of example.md and catdefinitions.tex embedded.
+    # It assumes the command is run from the root of the herdtools7 repository.
+    # If the current directory is different, the correct path to catdefinitions.tex should be given.
+    pandoc -f markdown+raw_tex+latex_macros+subscript --wrap=preserve --preserve-tabs --lua-filter=fix-formatting.lua example.md -o out.tex -H herd/libdir/catdefinitions.tex
+
+    # Some LaTeX syntax post-processing...
+    sed -i '' 's/#1#2/[2]/g' out.tex
+
+    # Replaces the LaTeX commands with their contents
+    pandoc out.tex --wrap=preserve --lua-filter=capitalize.lua -o res.md
+
+
+After step 4, we should have a complete description of all valid executions of some_test.litmus described inside red.md.
+
+Appendix:
+
+fix-formatting.lua:
+function RawInline(el)
+  if el.format == "tex" then
+    local updated_text = el.text
+      :gsub("~([^~]+)~", "\\textsubscript{%1}") -- Fix subscripts
+      :gsub("`([^`]+)`", "\\texttt{%1}")       -- Fix monospace
+    return pandoc.RawInline("tex", updated_text)
+  end
+end
+
+capitalize.lua:
+function capitalize_first_word(inlines)
+    local found_colon = false  -- Track when we encounter ':'
+
+    for i, elem in ipairs(inlines) do
+        if elem.t == "Str" then
+            -- Check if this element contains only ":"
+            if elem.text:match(":$") then
+                found_colon = true  -- Found the colon, next word should be capitalized
+            elseif found_colon then
+                -- Capitalize the first lowercase letter after the colon
+                inlines[i] = pandoc.Str(elem.text:gsub("^(%l)", string.upper, 1))
+                break  -- Only modify the first word after ':'
+            end
+        end
+    end
+
+    return inlines
+end
+
+function BulletList(el)
+    -- Process each list item inside the unordered list
+    for _, item in ipairs(el.content) do
+        for _, block in ipairs(item) do
+            if block.t == "Plain" or block.t == "Para" then
+                block.content = capitalize_first_word(block.content)
+            end
+        end
+    end
+    return el
+end
